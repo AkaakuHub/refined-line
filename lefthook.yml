@@ -1,0 +1,11 @@
+pre-commit:
+  jobs:
+    - name: check js
+      glob: "src-tauri/injections/**/*.js"
+      run: pnpm run check:js
+      stage_fixed: true
+
+    - name: check rust
+      glob: "src-tauri/**/*.rs"
+      run: pnpm run check:rust
+      stage_fixed: true
