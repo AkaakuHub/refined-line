@@ -8,4 +8,8 @@ pre-commit:
     - name: check rust
       glob: "src-tauri/**/*.rs"
       run: pnpm run check:rust
+
+    - name: fmt rust
+      glob: "src-tauri/**/*.rs"
+      run: pnpm run fmt:rust
       stage_fixed: true

@@ -1,0 +1,5 @@
+# Keep rustfmt output compact and aligned with 2-space indentation preference.
+
+tab_spaces = 2
+hard_tabs = false
+edition = "2021"
