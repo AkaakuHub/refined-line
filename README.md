@@ -5,7 +5,10 @@ Only support Windows.
 ## Current Features
 
 - Antialias Font
-- Toggle Side Bar (Alt + L)
+- Hide Side Bar (Alt + L)
+  - default: off
+- Hide window from capture (Alt + H)
+  - default: on
 
 ## How it work
 
