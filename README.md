@@ -9,4 +9,5 @@ Only support Windows.
 
 ## How it work
 
-This application just loads official Chrome Extension automatically, so nothing unofficial is used under the ToS.
+- This application just loads official Chrome Extension automatically, so nothing unofficial is used under the ToS.
+- This application has no relation with the official LY Corporation.
