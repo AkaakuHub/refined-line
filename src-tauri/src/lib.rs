@@ -23,9 +23,10 @@ use extensions::prepare_extensions;
 use injections::{inject_hotkeys, inject_scripts};
 use log::{error, warn};
 use logger::{apply_log_level, build_plugin, resolve_log_level};
-use settings::load_settings;
+use settings::{load_settings, save_settings};
 use tauri::webview::PageLoadEvent;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_opener::OpenerExt;
 use tray::setup_tray;
 #[cfg(target_os = "windows")]
@@ -79,7 +80,13 @@ pub fn run() {
     .plugin(tauri_plugin_opener::init())
     .setup(|app| {
       let app_handle = app.handle().clone();
-      let settings = load_settings(&app_handle).unwrap_or_default();
+      let mut settings = load_settings(&app_handle).unwrap_or_default();
+      if let Ok(enabled) = app_handle.autolaunch().is_enabled() {
+        if settings.auto_start != enabled {
+          settings.auto_start = enabled;
+          let _ = save_settings(&app_handle, &settings);
+        }
+      }
       app.manage(WindowState::new(settings.content_protection));
       apply_log_level(resolve_log_level(&settings.log_level));
       let config = load_config(&app_handle)?;
