@@ -40,7 +40,7 @@ pub(crate) fn build_menu(
   let content_protection = CheckMenuItem::with_id(
     app_handle,
     MenuId::new(MENU_CONTENT_PROTECTION_ID),
-    "画面を保護 (Alt+H)",
+    "画面を保護",
     true,
     settings.content_protection,
     Some("Alt+H"),
