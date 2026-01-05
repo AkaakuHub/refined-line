@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.2.0](https://github.com/AkaakuHub/refined-line/compare/v0.1.0...v0.2.0) (2026-01-05)
+
+
+### Features
+
+* crxをキャッシュし、アップデートを監視 ([90c6f58](https://github.com/AkaakuHub/refined-line/commit/90c6f585282b35597fa531ec19a12b19508b08f2))
+* refine logger ([f0e653c](https://github.com/AkaakuHub/refined-line/commit/f0e653ccda9639a930798626e18c327d84bfdb69))
+
+
+### Bug Fixes
+
+* appdata dir ([ac0513a](https://github.com/AkaakuHub/refined-line/commit/ac0513a0ac05d7335d390bf0267b087c54aa5580))
+* identifier ([6f6ea81](https://github.com/AkaakuHub/refined-line/commit/6f6ea8190d8d63da75c518a1518b287969b10eb8))
+* log menuの表示をdevのみにする ([1006727](https://github.com/AkaakuHub/refined-line/commit/1006727f6d90db406fd276589c2050df07dd2d2d))
+* menuの文言 ([43f3a26](https://github.com/AkaakuHub/refined-line/commit/43f3a265c7cd83790ca8855d8b70fcd51e07ac42))
+* tauri.localhostをローカル扱いする ([7426f21](https://github.com/AkaakuHub/refined-line/commit/7426f21b97af5c44ebfb469be1e73c2ad7db14c7))
+* version ([52f8993](https://github.com/AkaakuHub/refined-line/commit/52f899330ed000d9c0852988098750d5b152fb32))
+* システムトレイに正しく常駐 ([9624bfa](https://github.com/AkaakuHub/refined-line/commit/9624bfa5af5a57245937cb4b7c1396705d7eda79))
+
 ## [0.1.0](https://github.com/AkaakuHub/refined-line/compare/v0.0.1...v0.1.0) (2026-01-05)
 
 
