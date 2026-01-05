@@ -21,6 +21,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-autostart = "2"
 tauri-plugin-opener = "2"
+tauri-plugin-log = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
@@ -32,3 +33,4 @@ zip = { version = "2.2", default-features = false, features = ["deflate"] }
 webview2-com = "0.38"
 windows = "0.61.2"
 sha2 = "0.10"
+log = "0.4"

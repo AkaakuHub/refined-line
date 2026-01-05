@@ -11,6 +11,7 @@ pub(crate) struct AppSettings {
   pub(crate) auto_start: bool,
   pub(crate) start_minimized: bool,
   pub(crate) content_protection: bool,
+  pub(crate) log_level: String,
 }
 
 impl Default for AppSettings {
@@ -19,6 +20,7 @@ impl Default for AppSettings {
       auto_start: false,
       start_minimized: false,
       content_protection: true,
+      log_level: crate::logger::DEFAULT_LOG_LEVEL.to_string(),
     }
   }
 }

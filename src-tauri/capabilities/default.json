@@ -13,6 +13,7 @@
     "core:webview:default",
     "core:webview:allow-create-webview-window",
     "opener:default",
+    "log:default",
     "autostart:allow-enable",
     "autostart:allow-disable",
     "autostart:allow-is-enabled"

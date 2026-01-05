@@ -1,4 +1,5 @@
 use crate::content_protection::{is_content_protected, set_content_protection_from_app};
+use crate::logger::{apply_log_level, LogLevel};
 use crate::settings::{load_settings, save_settings};
 use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuId, PredefinedMenuItem, Submenu};
 use tauri::{Manager, Wry};
@@ -7,12 +8,22 @@ use tauri_plugin_autostart::ManagerExt;
 const MENU_CONTENT_PROTECTION_ID: &str = "menu.content_protection";
 const MENU_AUTOSTART_ID: &str = "menu.autostart";
 const MENU_START_MINIMIZED_ID: &str = "menu.start_minimized";
+const MENU_LOG_ERROR_ID: &str = "menu.log.error";
+const MENU_LOG_WARN_ID: &str = "menu.log.warn";
+const MENU_LOG_INFO_ID: &str = "menu.log.info";
+const MENU_LOG_DEBUG_ID: &str = "menu.log.debug";
+const MENU_LOG_VERBOSE_ID: &str = "menu.log.verbose";
 
 pub(crate) struct MenuState {
   pub(crate) menu: Menu<Wry>,
   content_protection: CheckMenuItem<Wry>,
   autostart: CheckMenuItem<Wry>,
   start_minimized: CheckMenuItem<Wry>,
+  log_error: CheckMenuItem<Wry>,
+  log_warn: CheckMenuItem<Wry>,
+  log_info: CheckMenuItem<Wry>,
+  log_debug: CheckMenuItem<Wry>,
+  log_verbose: CheckMenuItem<Wry>,
 }
 
 pub(crate) fn build_menu(
@@ -23,6 +34,7 @@ pub(crate) fn build_menu(
     .autolaunch()
     .is_enabled()
     .unwrap_or(settings.auto_start);
+  let effective_log_level = crate::logger::resolve_log_level(&settings.log_level);
 
   let content_protection = CheckMenuItem::with_id(
     app_handle,
@@ -48,6 +60,53 @@ pub(crate) fn build_menu(
     settings.start_minimized,
     None::<&str>,
   )?;
+  let log_error = CheckMenuItem::with_id(
+    app_handle,
+    MenuId::new(MENU_LOG_ERROR_ID),
+    "Error",
+    true,
+    effective_log_level == LogLevel::Error,
+    None::<&str>,
+  )?;
+  let log_warn = CheckMenuItem::with_id(
+    app_handle,
+    MenuId::new(MENU_LOG_WARN_ID),
+    "Warn",
+    true,
+    effective_log_level == LogLevel::Warn,
+    None::<&str>,
+  )?;
+  let log_info = CheckMenuItem::with_id(
+    app_handle,
+    MenuId::new(MENU_LOG_INFO_ID),
+    "Info",
+    true,
+    effective_log_level == LogLevel::Info,
+    None::<&str>,
+  )?;
+  let log_debug = CheckMenuItem::with_id(
+    app_handle,
+    MenuId::new(MENU_LOG_DEBUG_ID),
+    "Debug",
+    true,
+    effective_log_level == LogLevel::Debug,
+    None::<&str>,
+  )?;
+  let log_verbose = CheckMenuItem::with_id(
+    app_handle,
+    MenuId::new(MENU_LOG_VERBOSE_ID),
+    "Verbose",
+    true,
+    effective_log_level == LogLevel::Verbose,
+    None::<&str>,
+  )?;
+
+  let log_menu = Submenu::with_items(
+    app_handle,
+    "ログレベル",
+    true,
+    &[&log_error, &log_warn, &log_info, &log_debug, &log_verbose],
+  )?;
 
   let settings_menu = Submenu::with_items(
     app_handle,
@@ -57,6 +116,8 @@ pub(crate) fn build_menu(
       &content_protection,
       &autostart,
       &start_minimized,
+      &PredefinedMenuItem::separator(app_handle)?,
+      &log_menu,
       &PredefinedMenuItem::separator(app_handle)?,
       &PredefinedMenuItem::close_window(app_handle, None)?,
     ],
@@ -68,6 +129,11 @@ pub(crate) fn build_menu(
     content_protection,
     autostart,
     start_minimized,
+    log_error,
+    log_warn,
+    log_info,
+    log_debug,
+    log_verbose,
   })
 }
 
@@ -114,6 +180,21 @@ pub(crate) fn handle_menu_event(app_handle: &tauri::AppHandle, event: MenuEvent)
       }
       set_menu_checked(app_handle, MENU_START_MINIMIZED_ID, target);
     }
+    id if id == MENU_LOG_ERROR_ID => {
+      update_log_level(app_handle, LogLevel::Error);
+    }
+    id if id == MENU_LOG_WARN_ID => {
+      update_log_level(app_handle, LogLevel::Warn);
+    }
+    id if id == MENU_LOG_INFO_ID => {
+      update_log_level(app_handle, LogLevel::Info);
+    }
+    id if id == MENU_LOG_DEBUG_ID => {
+      update_log_level(app_handle, LogLevel::Debug);
+    }
+    id if id == MENU_LOG_VERBOSE_ID => {
+      update_log_level(app_handle, LogLevel::Verbose);
+    }
     _ => {}
   }
 }
@@ -132,8 +213,36 @@ pub(crate) fn set_menu_checked(app_handle: &tauri::AppHandle, id: &str, checked:
     MENU_START_MINIMIZED_ID => {
       let _ = state.start_minimized.set_checked(checked);
     }
+    MENU_LOG_ERROR_ID => {
+      let _ = state.log_error.set_checked(checked);
+    }
+    MENU_LOG_WARN_ID => {
+      let _ = state.log_warn.set_checked(checked);
+    }
+    MENU_LOG_INFO_ID => {
+      let _ = state.log_info.set_checked(checked);
+    }
+    MENU_LOG_DEBUG_ID => {
+      let _ = state.log_debug.set_checked(checked);
+    }
+    MENU_LOG_VERBOSE_ID => {
+      let _ = state.log_verbose.set_checked(checked);
+    }
     _ => {}
   }
+}
+
+fn update_log_level(app_handle: &tauri::AppHandle, level: LogLevel) {
+  apply_log_level(level);
+  if let Ok(mut settings) = load_settings(app_handle) {
+    settings.log_level = level.as_str().to_string();
+    let _ = save_settings(app_handle, &settings);
+  }
+  set_menu_checked(app_handle, MENU_LOG_ERROR_ID, level == LogLevel::Error);
+  set_menu_checked(app_handle, MENU_LOG_WARN_ID, level == LogLevel::Warn);
+  set_menu_checked(app_handle, MENU_LOG_INFO_ID, level == LogLevel::Info);
+  set_menu_checked(app_handle, MENU_LOG_DEBUG_ID, level == LogLevel::Debug);
+  set_menu_checked(app_handle, MENU_LOG_VERBOSE_ID, level == LogLevel::Verbose);
 }
 
 pub(crate) fn menu_content_protection_id() -> &'static str {

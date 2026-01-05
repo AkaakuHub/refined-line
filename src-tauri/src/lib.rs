@@ -5,6 +5,7 @@ mod content_protection;
 mod crx;
 mod extensions;
 mod injections;
+mod logger;
 mod settings;
 mod tray;
 mod windowing;
@@ -20,6 +21,7 @@ use content_protection::{
 use extensions::install_extensions_and_open;
 use extensions::prepare_extensions;
 use injections::{inject_hotkeys, inject_scripts};
+use logger::{apply_log_level, build_plugin, resolve_log_level};
 use settings::load_settings;
 use tauri::webview::PageLoadEvent;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
@@ -68,6 +70,7 @@ pub fn run() {
     .on_menu_event(|app, event| {
       handle_menu_event(app, event);
     })
+    .plugin(build_plugin())
     .plugin(tauri_plugin_autostart::init(
       tauri_plugin_autostart::MacosLauncher::LaunchAgent,
       None,
@@ -77,6 +80,7 @@ pub fn run() {
       let app_handle = app.handle().clone();
       let settings = load_settings(&app_handle).unwrap_or_default();
       app.manage(WindowState::new(settings.content_protection));
+      apply_log_level(resolve_log_level(&settings.log_level));
       let config = load_config(&app_handle)?;
       let menu_state = build_menu(&app_handle, &settings)?;
 
