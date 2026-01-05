@@ -48,8 +48,8 @@ pub(crate) fn prepare_extensions(app: &tauri::AppHandle) -> Result<ExtensionSetu
   let extensions_root = app_data.join("extensions");
   let line_dir = extensions_root.join("line");
   let user_dir = extensions_root.join("user");
-  let crx_path = extensions_root.join(format!("{}.crx", config.line_extension_id));
 
+  info!("[update] storage root={}", extensions_root.display());
   fs::create_dir_all(&user_dir)?;
 
   let current_version = read_manifest_version(&line_dir);
@@ -69,6 +69,7 @@ pub(crate) fn prepare_extensions(app: &tauri::AppHandle) -> Result<ExtensionSetu
     match check_update(&update_url) {
       Ok(UpdateCheck::NoUpdate) => {
         if has_existing {
+          info!("[update] use local extension (v{})", version);
           return Ok(ExtensionSetup {
             line_dir,
             user_dir,
@@ -78,31 +79,12 @@ pub(crate) fn prepare_extensions(app: &tauri::AppHandle) -> Result<ExtensionSetu
         }
       }
       Ok(UpdateCheck::UpdateAvailable(payload)) => {
+        info!("[update] update available");
         updated = has_existing;
         crx_bytes = payload;
       }
       Err(error) => {
         warn!("[update] check failed: {error:#}");
-      }
-    }
-  }
-
-  if crx_bytes.is_none() && crx_path.is_file() && !updated && has_existing {
-    return Ok(ExtensionSetup {
-      line_dir,
-      user_dir,
-      updated: false,
-      update_failed: false,
-    });
-  }
-
-  if crx_bytes.is_none() && crx_path.is_file() && !updated {
-    match fs::read(&crx_path) {
-      Ok(buffer) => {
-        crx_bytes = Some(buffer);
-      }
-      Err(error) => {
-        warn!("[update] read cache failed: {error:#}");
       }
     }
   }
@@ -122,6 +104,7 @@ pub(crate) fn prepare_extensions(app: &tauri::AppHandle) -> Result<ExtensionSetu
 
   if update_failed {
     if has_existing {
+      info!("[update] use local extension (update failed)");
       return Ok(ExtensionSetup {
         line_dir,
         user_dir,
@@ -133,14 +116,15 @@ pub(crate) fn prepare_extensions(app: &tauri::AppHandle) -> Result<ExtensionSetu
   }
 
   let crx_bytes = crx_bytes.ok_or_else(|| anyhow!("crx bytes missing"))?;
-  if let Err(error) = fs::write(&crx_path, &crx_bytes) {
-    warn!("[update] cache write failed: {error:#}");
-  }
-
   let parsed = parse_crx3(&crx_bytes)?;
   ensure_clean_dir(&line_dir)?;
   extract_zip(&parsed.zip_bytes, &line_dir)?;
   inject_manifest_key(&line_dir, &parsed.public_key)?;
+  if let Some(version) = read_manifest_version(&line_dir) {
+    info!("[update] installed extension v{} (network)", version);
+  } else {
+    info!("[update] installed extension (network)");
+  }
 
   Ok(ExtensionSetup {
     line_dir,
