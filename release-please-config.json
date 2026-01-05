@@ -1,0 +1,10 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "refined-line"
+    }
+  },
+  "include-v-in-tag": true,
+  "include-component-in-tag": false
+}

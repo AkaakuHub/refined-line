@@ -8,6 +8,7 @@ mod injections;
 mod logger;
 mod settings;
 mod tray;
+mod updater;
 mod windowing;
 
 use app_menu::{build_menu, handle_menu_event};
@@ -29,6 +30,7 @@ use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_opener::OpenerExt;
 use tray::setup_tray;
+use updater::spawn_update_check;
 #[cfg(target_os = "windows")]
 use windowing::{
   attach_close_requested_handler, attach_new_window_handler, attach_permission_handler,
@@ -77,7 +79,9 @@ pub fn run() {
       tauri_plugin_autostart::MacosLauncher::LaunchAgent,
       None,
     ))
+    .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_updater::Builder::new().build())
     .setup(|app| {
       let app_handle = app.handle().clone();
       let mut settings = load_settings(&app_handle).unwrap_or_default();
@@ -201,6 +205,7 @@ pub fn run() {
       if let Err(error) = setup_tray(&app_handle) {
         warn!("[tray] failed: {error:#}");
       }
+      spawn_update_check(&app_handle);
       if settings.start_minimized {
         let _ = _window.minimize();
       }
