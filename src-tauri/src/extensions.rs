@@ -40,10 +40,17 @@ pub(crate) struct ExtensionSetup {
 
 pub(crate) fn prepare_extensions(app: &tauri::AppHandle) -> Result<ExtensionSetup> {
   let config = load_config(app)?;
-  let app_data = app
-    .path()
-    .app_data_dir()
-    .map_err(|error| anyhow!("app data dir error: {error}"))?;
+  let app_name = app.package_info().name.clone();
+  let app_data = dirs::data_dir()
+    .map(|dir| dir.join(&app_name))
+    .or_else(|| {
+      app
+        .path()
+        .app_data_dir()
+        .ok()
+        .map(|dir| dir.join(&app_name))
+    })
+    .ok_or_else(|| anyhow!("app data dir error"))?;
 
   let extensions_root = app_data.join("extensions");
   let line_dir = extensions_root.join("line");
