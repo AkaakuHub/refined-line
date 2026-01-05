@@ -65,6 +65,7 @@ pub(crate) fn build_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
     .level(LevelFilter::Trace)
     .timezone_strategy(TimezoneStrategy::UseLocal)
     .rotation_strategy(RotationStrategy::KeepAll)
+    .clear_targets()
     .target(Target::new(TargetKind::Stdout))
     .target(Target::new(TargetKind::LogDir { file_name: None }))
     .build()

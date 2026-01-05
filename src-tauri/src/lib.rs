@@ -21,6 +21,7 @@ use content_protection::{
 use extensions::install_extensions_and_open;
 use extensions::prepare_extensions;
 use injections::{inject_hotkeys, inject_scripts};
+use log::{error, warn};
 use logger::{apply_log_level, build_plugin, resolve_log_level};
 use settings::load_settings;
 use tauri::webview::PageLoadEvent;
@@ -141,7 +142,7 @@ pub fn run() {
               let window = match builder.build() {
                 Ok(window) => window,
                 Err(error) => {
-                  eprintln!("[new-window] failed: {error:#}");
+                  error!("[new-window] failed: {error:#}");
                   return tauri::webview::NewWindowResponse::Deny;
                 }
               };
@@ -165,21 +166,21 @@ pub fn run() {
                   let popup_label = popup_label_for_tasks.clone();
                   move |webview| {
                     if let Err(error) = attach_new_window_handler(app_handle.clone(), &webview) {
-                      eprintln!("[new-window] handler failed: {error:#}");
+                      warn!("[new-window] handler failed: {error:#}");
                     }
                     if let Err(error) = attach_permission_handler(&webview) {
-                      eprintln!("[new-window] permission handler failed: {error:#}");
+                      warn!("[new-window] permission handler failed: {error:#}");
                     }
                     if let Err(error) = attach_close_requested_handler(
                       app_handle.clone(),
                       &webview,
                       popup_label.clone(),
                     ) {
-                      eprintln!("[new-window] close handler failed: {error:#}");
+                      warn!("[new-window] close handler failed: {error:#}");
                     }
                   }
                 }) {
-                  eprintln!("[new-window] with_webview failed: {error:#}");
+                  error!("[new-window] with_webview failed: {error:#}");
                 }
               });
 
@@ -191,7 +192,7 @@ pub fn run() {
       store_base_title(&app_handle, "main", base_title);
       app.manage(menu_state);
       if let Err(error) = setup_tray(&app_handle) {
-        eprintln!("[tray] failed: {error:#}");
+        warn!("[tray] failed: {error:#}");
       }
       if settings.start_minimized {
         let _ = _window.minimize();
@@ -203,7 +204,7 @@ pub fn run() {
         let (line_dir, user_dir) = match prepare_extensions(&app_handle_for_update) {
           Ok(result) => result,
           Err(error) => {
-            eprintln!("[update] failed: {error:#}");
+            error!("[update] failed: {error:#}");
             return;
           }
         };
@@ -213,7 +214,7 @@ pub fn run() {
         let handle_for_task = app_handle_for_install.clone();
         let _ = app_handle_for_install.run_on_main_thread(move || {
           let Some(window) = handle_for_task.get_webview_window("main") else {
-            eprintln!("[open] main window not found");
+            warn!("[open] main window not found");
             return;
           };
           if let Err(error) = window.with_webview(move |webview| {
@@ -225,11 +226,11 @@ pub fn run() {
               entry_path_for_install,
             );
             if let Err(error) = result {
-              eprintln!("[open] failed: {error:#}");
+              error!("[open] failed: {error:#}");
               panic!("failed to open LINE extension");
             }
           }) {
-            eprintln!("[open] with_webview failed: {error:#}");
+            error!("[open] with_webview failed: {error:#}");
           }
         });
       });

@@ -27,6 +27,8 @@ fn is_localhost_url(url: &Url) -> bool {
 #[cfg(target_os = "windows")]
 use anyhow::Result;
 #[cfg(target_os = "windows")]
+use log::warn;
+#[cfg(target_os = "windows")]
 use tauri::webview::PlatformWebview;
 #[cfg(target_os = "windows")]
 use tauri::Manager;
@@ -64,7 +66,7 @@ pub(crate) fn attach_new_window_handler(
     if let Ok(url) = Url::parse(&uri) {
       if should_open_external(&url) {
         if let Err(error) = app_handle.opener().open_url(url.as_str(), None::<&str>) {
-          eprintln!("[open] failed: {error:#}");
+          warn!("[open] failed: {error:#}");
         }
         unsafe {
           args.SetHandled(true)?;

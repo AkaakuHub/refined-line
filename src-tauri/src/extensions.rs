@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use log::info;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
@@ -42,7 +43,7 @@ pub(crate) fn prepare_extensions(app: &tauri::AppHandle) -> Result<(PathBuf, Pat
   fs::create_dir_all(&user_dir)?;
 
   let update_url = build_update_url(&config.update2_base_url, &config.line_extension_id);
-  println!("[update] start {}", update_url);
+  info!("[update] start {}", update_url);
   let crx_bytes = download_crx(&update_url)?;
   let parsed = parse_crx3(&crx_bytes)?;
 
@@ -174,7 +175,7 @@ pub(crate) fn install_extensions_and_open(
   }
 
   let page_url = format!("chrome-extension://{line_id}{entry_path}");
-  println!("[open] {}", page_url);
+  info!("[open] {}", page_url);
   let target = HSTRING::from(page_url.as_str());
   unsafe {
     core.Navigate(&target)?;

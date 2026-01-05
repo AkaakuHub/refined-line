@@ -1,4 +1,5 @@
 use crate::settings::update_content_protection;
+use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::sync::{
   atomic::{AtomicBool, Ordering},
@@ -81,7 +82,7 @@ fn set_content_protection_state(
   state.protected.store(enabled, Ordering::Relaxed);
   let count = apply_content_protection(app_handle, enabled);
   if let Err(error) = update_content_protection(app_handle, enabled) {
-    eprintln!("[content-protected] save failed: {error:#}");
+    warn!("[content-protected] save failed: {error:#}");
   }
   crate::app_menu::set_menu_checked(
     app_handle,
@@ -89,7 +90,7 @@ fn set_content_protection_state(
     enabled,
   );
   let _ = app_handle.emit("content-protection-changed", enabled);
-  println!("[content-protected] set {enabled} windows={count}");
+  info!("[content-protected] set {enabled} windows={count}");
   Ok(enabled)
 }
 
@@ -100,12 +101,12 @@ pub(crate) fn set_content_protected<R: Runtime>(
   base_title: Option<&str>,
 ) {
   if let Err(error) = window.set_content_protected(protected) {
-    eprintln!("[content-protected] {label} failed: {error:#}");
+    warn!("[content-protected] {label} failed: {error:#}");
   } else {
     if let Some(base_title) = base_title {
       update_window_title(window, base_title, protected);
     }
-    println!("[content-protected] {label} set {protected}");
+    debug!("[content-protected] {label} set {protected}");
   }
 }
 
