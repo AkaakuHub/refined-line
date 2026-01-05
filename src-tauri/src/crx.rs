@@ -40,8 +40,43 @@ pub(crate) struct ParsedCrx {
   pub(crate) zip_bytes: Vec<u8>,
 }
 
-pub(crate) fn build_update_url(base: &str, extension_id: &str) -> String {
-  format!("{base}?response=redirect&os=win&arch=x64&os_arch=x86_64&nacl_arch=x86-64&prod=chromecrx&prodchannel=unknown&prodversion=120.0.0.0&acceptformat=crx2%2Ccrx3&x=id%3D{extension_id}%26installsource%3Dondemand%26uc")
+pub(crate) fn build_update_url(base: &str, extension_id: &str, version: Option<&str>) -> String {
+  let mut x = format!("id%3D{extension_id}%26installsource%3Dondemand");
+  if let Some(version) = version {
+    x.push_str(&format!("%26v%3D{version}"));
+  }
+  x.push_str("%26uc");
+  format!("{base}?response=redirect&os=win&arch=x64&os_arch=x86_64&nacl_arch=x86-64&prod=chromecrx&prodchannel=unknown&prodversion=120.0.0.0&acceptformat=crx2%2Ccrx3&x={x}")
+}
+
+pub(crate) enum UpdateCheck {
+  NoUpdate,
+  UpdateAvailable(Option<Vec<u8>>),
+}
+
+pub(crate) fn check_update(url: &str) -> Result<UpdateCheck> {
+  let agent = ureq::AgentBuilder::new()
+    .timeout_connect(Duration::from_secs(10))
+    .timeout_read(Duration::from_secs(10))
+    .timeout_write(Duration::from_secs(10))
+    .redirects(0)
+    .build();
+  let response = agent
+    .get(url)
+    .call()
+    .map_err(|error| anyhow!("update check failed: {error}"))?;
+
+  match response.status() {
+    204 => Ok(UpdateCheck::NoUpdate),
+    200 => {
+      let mut reader = response.into_reader();
+      let mut buffer = Vec::new();
+      reader.read_to_end(&mut buffer)?;
+      Ok(UpdateCheck::UpdateAvailable(Some(buffer)))
+    }
+    301 | 302 | 307 | 308 => Ok(UpdateCheck::UpdateAvailable(None)),
+    status => Err(anyhow!("update check failed: {}", status)),
+  }
 }
 
 pub(crate) fn download_crx(url: &str) -> Result<Vec<u8>> {

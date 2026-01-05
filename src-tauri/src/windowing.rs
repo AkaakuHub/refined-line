@@ -20,7 +20,7 @@ pub(crate) fn should_open_external(url: &Url) -> bool {
 fn is_localhost_url(url: &Url) -> bool {
   matches!(
     url.host_str(),
-    Some("localhost") | Some("127.0.0.1") | Some("::1")
+    Some("localhost") | Some("127.0.0.1") | Some("::1") | Some("tauri.localhost")
   )
 }
 

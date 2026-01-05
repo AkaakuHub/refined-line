@@ -20,7 +20,7 @@ use content_protection::{
 };
 #[cfg(target_os = "windows")]
 use extensions::install_extensions_and_open;
-use extensions::prepare_extensions;
+use extensions::{prepare_extensions, ExtensionSetup};
 use injections::{inject_hotkeys, inject_scripts};
 use log::{error, warn};
 use logger::{apply_log_level, build_plugin, resolve_log_level};
@@ -28,8 +28,9 @@ use settings::{load_settings, save_settings};
 use tauri::webview::PageLoadEvent;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
-use tray::setup_tray;
+use tray::{init_tray_state, is_tray_enabled};
 use updater::spawn_update_check;
 #[cfg(target_os = "windows")]
 use windowing::{
@@ -73,6 +74,14 @@ pub fn run() {
     ])
     .on_menu_event(|app, event| {
       handle_menu_event(app, event);
+    })
+    .on_window_event(|window, event| {
+      if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+        if window.label() == "main" && is_tray_enabled(window.app_handle()) {
+          api.prevent_close();
+          let _ = window.hide();
+        }
+      }
     })
     .plugin(build_plugin())
     .plugin(tauri_plugin_autostart::init(
@@ -202,7 +211,7 @@ pub fn run() {
 
       store_base_title(&app_handle, "main", base_title);
       app.manage(menu_state);
-      if let Err(error) = setup_tray(&app_handle) {
+      if let Err(error) = init_tray_state(&app_handle, settings.start_minimized) {
         warn!("[tray] failed: {error:#}");
       }
       spawn_update_check(&app_handle);
@@ -213,10 +222,24 @@ pub fn run() {
       let entry_path = config.line_entry_path.clone();
       let app_handle_for_update = app_handle.clone();
       std::thread::spawn(move || {
-        let (line_dir, user_dir) = match prepare_extensions(&app_handle_for_update) {
+        let ExtensionSetup {
+          line_dir,
+          user_dir,
+          updated,
+          update_failed,
+        } = match prepare_extensions(&app_handle_for_update) {
           Ok(result) => result,
           Err(error) => {
             error!("[update] failed: {error:#}");
+            let app_handle = app_handle_for_update.clone();
+            let dialog_handle = app_handle.clone();
+            let _ = app_handle.run_on_main_thread(move || {
+              dialog_handle
+                .dialog()
+                .message("アップデートに失敗しました。")
+                .title("更新失敗")
+                .show(|_| {});
+            });
             return;
           }
         };
@@ -224,18 +247,24 @@ pub fn run() {
         let app_handle_for_install = app_handle_for_update.clone();
         let entry_path_for_install = entry_path.clone();
         let handle_for_task = app_handle_for_install.clone();
+        let updated_for_dialog = updated;
+        let update_failed_for_dialog = update_failed;
         let _ = app_handle_for_install.run_on_main_thread(move || {
           let Some(window) = handle_for_task.get_webview_window("main") else {
             warn!("[open] main window not found");
             return;
           };
+          let app_handle_for_install = handle_for_task.clone();
+          let line_dir_for_install = line_dir.clone();
+          let user_dir_for_install = user_dir.clone();
+          let entry_path_for_install = entry_path_for_install.clone();
           if let Err(error) = window.with_webview(move |webview| {
             let result = install_extensions_and_open(
-              handle_for_task.clone(),
+              app_handle_for_install.clone(),
               webview,
-              line_dir,
-              user_dir,
-              entry_path_for_install,
+              line_dir_for_install.clone(),
+              user_dir_for_install.clone(),
+              entry_path_for_install.clone(),
             );
             if let Err(error) = result {
               error!("[open] failed: {error:#}");
@@ -243,6 +272,26 @@ pub fn run() {
             }
           }) {
             error!("[open] with_webview failed: {error:#}");
+          }
+
+          if update_failed_for_dialog {
+            let app_handle = handle_for_task.clone();
+            app_handle
+              .dialog()
+              .message("アップデートに失敗しました。")
+              .title("更新失敗")
+              .show(|_| {});
+          } else if updated_for_dialog {
+            let app_handle = handle_for_task.clone();
+            app_handle
+              .dialog()
+              .message("拡張機能を更新しました。再起動しますか？")
+              .title("更新完了")
+              .show(move |confirmed| {
+                if confirmed {
+                  app_handle.restart();
+                }
+              });
           }
         });
       });
