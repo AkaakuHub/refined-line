@@ -72,9 +72,6 @@ pub fn run() {
       get_settings,
       update_settings
     ])
-    .on_menu_event(|app, event| {
-      handle_menu_event(app, event);
-    })
     .on_window_event(|window, event| {
       if let tauri::WindowEvent::CloseRequested { api, .. } = event {
         if window.label() == "main" && is_tray_enabled(window.app_handle()) {
@@ -112,6 +109,9 @@ pub fn run() {
           .inner_size(1280.0, 800.0)
           .browser_extensions_enabled(true)
           .menu(menu_state.menu.clone())
+          .on_menu_event(|window, event| {
+            handle_menu_event(window.app_handle(), event);
+          })
           .on_navigation({
             let app_handle = app_handle.clone();
             move |url| {
