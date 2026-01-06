@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/AkaakuHub/refined-line/compare/v0.2.0...v0.2.1) (2026-01-06)
+
+
+### Bug Fixes
+
+* installer language ([25deb0e](https://github.com/AkaakuHub/refined-line/commit/25deb0e9e742717f4f7731bd30dcadc9483b23b6))
+* menu toggle ([cc2e1f8](https://github.com/AkaakuHub/refined-line/commit/cc2e1f8a195aca153f685d247e1493a532f9da6f))
+
 ## [0.2.0](https://github.com/AkaakuHub/refined-line/compare/v0.1.0...v0.2.0) (2026-01-05)
 
 
