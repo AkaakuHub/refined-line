@@ -2,6 +2,7 @@ use crate::content_protection::{is_content_protected, set_content_protection_fro
 use crate::logger::{apply_log_level, LogLevel};
 use crate::settings::{load_settings, save_settings};
 use crate::tray::set_tray_enabled;
+use log::{info, warn};
 use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuId, PredefinedMenuItem, Submenu};
 use tauri::{is_dev, Manager, Wry};
 use tauri_plugin_autostart::ManagerExt;
@@ -147,6 +148,7 @@ pub(crate) fn build_menu(
 }
 
 pub(crate) fn handle_menu_event(app_handle: &tauri::AppHandle, event: MenuEvent) {
+  warn!("[menu] event id={:?}", event.id());
   match event.id() {
     id if id == MENU_CONTENT_PROTECTION_ID => {
       let target = !is_content_protected(app_handle);
@@ -155,28 +157,39 @@ pub(crate) fn handle_menu_event(app_handle: &tauri::AppHandle, event: MenuEvent)
       }
     }
     id if id == MENU_AUTOSTART_ID => {
-      let autolaunch = app_handle.autolaunch();
-      let fallback_enabled = load_settings(app_handle)
-        .map(|settings| settings.auto_start)
-        .unwrap_or(false);
-      let current = autolaunch.is_enabled().unwrap_or(fallback_enabled);
-      let target = !current;
-      let result = if target {
-        autolaunch.enable()
-      } else {
-        autolaunch.disable()
-      };
-      if result.is_err() {
-        let enabled = autolaunch.is_enabled().unwrap_or(false);
-        set_menu_checked(app_handle, MENU_AUTOSTART_ID, enabled);
-        return;
-      }
-      if let Ok(mut settings) = load_settings(app_handle) {
-        settings.auto_start = target;
-        let _ = save_settings(app_handle, &settings);
-      }
-      let enabled = autolaunch.is_enabled().unwrap_or(target);
-      set_menu_checked(app_handle, MENU_AUTOSTART_ID, enabled);
+      let app_handle = app_handle.clone();
+      std::thread::spawn(move || {
+        let fallback_enabled = load_settings(&app_handle)
+          .map(|settings| settings.auto_start)
+          .unwrap_or(false);
+        info!("[autostart] menu clicked");
+        let current = app_handle
+          .autolaunch()
+          .is_enabled()
+          .unwrap_or(fallback_enabled);
+        let target = !current;
+        info!("[autostart] toggle current={current} target={target}");
+
+        let result = if target {
+          app_handle.autolaunch().enable()
+        } else {
+          app_handle.autolaunch().disable()
+        };
+        if let Err(error) = result {
+          warn!("[autostart] update failed: {error:#}");
+        }
+        let enabled = app_handle.autolaunch().is_enabled().unwrap_or(current);
+
+        if let Ok(mut settings) = load_settings(&app_handle) {
+          settings.auto_start = enabled;
+          let _ = save_settings(&app_handle, &settings);
+        }
+
+        let menu_handle = app_handle.clone();
+        let _ = app_handle.run_on_main_thread(move || {
+          set_menu_checked(&menu_handle, MENU_AUTOSTART_ID, enabled);
+        });
+      });
     }
     id if id == MENU_START_MINIMIZED_ID => {
       let current = load_settings(app_handle)

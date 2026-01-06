@@ -24,6 +24,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "windows": {
+      "wix": {
+        "language": "ja-JP"
+      }
+    },
     "resources": [
       "config.json"
     ],
