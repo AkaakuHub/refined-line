@@ -261,7 +261,6 @@ fn collect_user_extension_dirs(user_dir: &Path) -> Result<Vec<PathBuf>> {
 
 #[cfg(target_os = "windows")]
 pub(crate) fn install_extensions_and_open(
-  app_handle: tauri::AppHandle,
   webview: PlatformWebview,
   line_dir: PathBuf,
   user_dir: PathBuf,
@@ -269,7 +268,7 @@ pub(crate) fn install_extensions_and_open(
 ) -> Result<()> {
   let controller = webview.controller();
   let core = unsafe { controller.CoreWebView2()? };
-  attach_new_window_handler(app_handle, &webview)?;
+  attach_new_window_handler(&webview)?;
   attach_permission_handler(&webview)?;
   unsafe {
     let settings = core.Settings()?;

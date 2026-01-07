@@ -195,7 +195,7 @@ pub fn run() {
                 let app_handle = app_handle_for_tasks.clone();
                 let popup_label = popup_label_for_tasks.clone();
                 move |webview| {
-                  if let Err(error) = attach_new_window_handler(app_handle.clone(), &webview) {
+                  if let Err(error) = attach_new_window_handler(&webview) {
                     warn!("[new-window] handler failed: {error:#}");
                   }
                   if let Err(error) = attach_permission_handler(&webview) {
@@ -264,13 +264,11 @@ pub fn run() {
             warn!("[open] main window not found");
             return;
           };
-          let app_handle_for_install = handle_for_task.clone();
           let line_dir_for_install = line_dir.clone();
           let user_dir_for_install = user_dir.clone();
           let entry_path_for_install = entry_path_for_install.clone();
           if let Err(error) = window.with_webview(move |webview| {
             let result = install_extensions_and_open(
-              app_handle_for_install.clone(),
               webview,
               line_dir_for_install.clone(),
               user_dir_for_install.clone(),

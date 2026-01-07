@@ -3,7 +3,7 @@ use crate::logger::{apply_log_level, LogLevel};
 use crate::settings::{load_settings, save_settings};
 use crate::tray::set_tray_enabled;
 use log::{info, warn};
-use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuId, PredefinedMenuItem, Submenu};
+use tauri::menu::{CheckMenuItem, MenuEvent, MenuId, PredefinedMenuItem, Submenu};
 use tauri::{is_dev, Manager, Wry};
 use tauri_plugin_autostart::ManagerExt;
 
@@ -17,7 +17,6 @@ const MENU_LOG_DEBUG_ID: &str = "menu.log.debug";
 const MENU_LOG_VERBOSE_ID: &str = "menu.log.verbose";
 
 pub(crate) struct MenuState {
-  pub(crate) menu: Menu<Wry>,
   content_protection: CheckMenuItem<Wry>,
   autostart: CheckMenuItem<Wry>,
   start_minimized: CheckMenuItem<Wry>,
@@ -131,11 +130,7 @@ pub(crate) fn build_menu(
     }
   }
   settings_items.push(&close_item);
-  let settings_menu = Submenu::with_items(app_handle, "設定", true, &settings_items)?;
-
-  let menu = Menu::with_items(app_handle, &[&settings_menu])?;
   Ok(MenuState {
-    menu,
     content_protection,
     autostart,
     start_minimized,
