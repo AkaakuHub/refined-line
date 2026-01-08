@@ -1,10 +1,13 @@
 # refined-line
 
-Only support Windows.
+[![Release](https://img.shields.io/github/v/release/AkaakuHub/refined-line)](https://github.com/AkaakuHub/refined-line/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows-blue)](https://github.com/AkaakuHub/refined-line)
+
+Only support Windows due to WebView2 dependency.
 
 ## Current Original Features
 
-- Antialiased Font
+- Automatic Antialiased Font
 - Send refined desktop notifications
 - Hide Side Bar (Alt + L)
   - default: off
@@ -13,5 +16,5 @@ Only support Windows.
 
 ## How it work
 
-- This application just loads official Chrome Extension automatically, so nothing unofficial is used under the ToS.
+- This application just loads official Chrome Extension, so this doesn not violate official ToS.
 - This application has no relation with the official LY Corporation.
