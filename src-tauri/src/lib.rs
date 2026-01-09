@@ -45,17 +45,17 @@ pub fn run() {
       if payload.event() != PageLoadEvent::Finished {
         return;
       }
-      let current_url = payload.url().as_str();
+      // let current_url = payload.url().as_str();
       let window = webview.window();
       let label: String = window.label().to_string();
       let _ = inject_hotkeys(webview);
       // if current_url.starts_with("chrome-extension://") {
-      /**
+      /*
       * 拡張機能内のHTMLファイル一覧（4種類）：
-       index.html
-       popup.html
-       ltsmSandbox.html
-       cropperSandbox.html
+      index.html
+      popup.html
+      ltsmSandbox.html
+      cropperSandbox.html
       */
       let _ = inject_scripts(webview);
       let _ = inject_titlebar(webview);
