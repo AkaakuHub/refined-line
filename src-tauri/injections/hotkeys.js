@@ -1,4 +1,5 @@
 (() => {
+  console.log("load hotkeys.js");
   if (window.__refinedLineHotkeysInstalled) return;
   window.__refinedLineHotkeysInstalled = true;
 

@@ -11,8 +11,8 @@ mod tray;
 mod updater;
 mod windowing;
 
-use app_menu::{build_menu, handle_menu_event};
-use commands::{get_settings, update_settings};
+use app_menu::{build_menu, handle_menu_event, menu_action};
+use commands::{get_is_dev, get_is_maximized, get_settings, update_settings};
 use config::load_config;
 use content_protection::{
   ensure_base_title, get_content_protection, is_content_protected, set_content_protected,
@@ -21,11 +21,13 @@ use content_protection::{
 #[cfg(target_os = "windows")]
 use extensions::install_extensions_and_open;
 use extensions::{prepare_extensions, ExtensionSetup};
-use injections::{inject_hotkeys, inject_scripts};
-use log::{error, warn};
+use injections::{inject_hotkeys, inject_scripts, inject_titlebar};
+use log::{debug, error, warn};
 use logger::{apply_log_level, build_plugin, resolve_log_level};
 use settings::{load_settings, save_settings};
 use tauri::webview::PageLoadEvent;
+#[cfg(target_os = "windows")]
+use tauri::webview::ScrollBarStyle;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_dialog::DialogExt;
@@ -45,14 +47,21 @@ pub fn run() {
       if payload.event() != PageLoadEvent::Finished {
         return;
       }
-      let current_url = payload.url().as_str();
+      // let current_url = payload.url().as_str();
       let window = webview.window();
-      let label = window.label().to_string();
+      let label: String = window.label().to_string();
       let _ = inject_hotkeys(webview);
-      if current_url.starts_with("chrome-extension://") {
-        let _ = inject_scripts(webview);
-      }
-
+      // if current_url.starts_with("chrome-extension://") {
+      /*
+      * 拡張機能内のHTMLファイル一覧（4種類）：
+      index.html
+      popup.html
+      ltsmSandbox.html
+      cropperSandbox.html
+      */
+      let _ = inject_scripts(webview);
+      let _ = inject_titlebar(webview);
+      // }
       let app_handle = window.app_handle().clone();
       let protected = is_content_protected(&app_handle);
       if let Some(webview_window) = app_handle.get_webview_window(&label) {
@@ -70,7 +79,10 @@ pub fn run() {
       get_content_protection,
       set_content_protection,
       get_settings,
-      update_settings
+      update_settings,
+      get_is_dev,
+      get_is_maximized,
+      menu_action
     ])
     .on_window_event(|window, event| {
       if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -103,111 +115,131 @@ pub fn run() {
       let menu_state = build_menu(&app_handle, &settings)?;
 
       let base_title = "refined-line";
-      let _window =
-        WebviewWindowBuilder::new(&app_handle, "main", WebviewUrl::App("index.html".into()))
-          .title(base_title)
-          .inner_size(1280.0, 800.0)
-          .browser_extensions_enabled(true)
-          .menu(menu_state.menu.clone())
-          .on_menu_event(|window, event| {
-            handle_menu_event(window.app_handle(), event);
-          })
-          .on_navigation({
-            let app_handle = app_handle.clone();
-            move |url| {
-              if should_open_external(url) {
-                let _ = app_handle.opener().open_url(url.as_str(), None::<&str>);
-                return false;
-              }
-              true
+      let conf = app_handle
+        .config()
+        .app
+        .windows
+        .get(0)
+        .ok_or("window config not found")?;
+      let mut builder = WebviewWindowBuilder::from_config(&app_handle, conf)?
+        .browser_extensions_enabled(true)
+        .on_menu_event(|window, event| {
+          handle_menu_event(window.app_handle(), event);
+        })
+        .on_navigation({
+          let app_handle = app_handle.clone();
+          move |url| {
+            debug!("[open] on_navigation url={}", url);
+            if should_open_external(url) {
+              debug!("[open] on_navigation external url={}", url);
+              let _ = app_handle.opener().open_url(url.as_str(), None::<&str>);
+              return false;
             }
-          })
-          .on_new_window({
-            let app_handle = app_handle.clone();
-            move |url, features| {
-              if should_open_external(&url) {
-                let _ = app_handle.opener().open_url(url.as_str(), None::<&str>);
+            true
+          }
+        })
+        .on_new_window({
+          let app_handle = app_handle.clone();
+          move |url, features| {
+            debug!("[open] on_new_window url={} features={:?}", url, features);
+            if should_open_external(&url) {
+              debug!("[open] on_new_window external url={}", url);
+              let _ = app_handle.opener().open_url(url.as_str(), None::<&str>);
+              return tauri::webview::NewWindowResponse::Deny;
+            }
+
+            let label = next_popup_label();
+            let popup_label = label.clone();
+            let popup_base_title = url.as_str().to_string();
+            store_base_title(&app_handle, popup_label.as_str(), &popup_base_title);
+
+            let mut builder =
+              WebviewWindowBuilder::new(&app_handle, label, WebviewUrl::External(url.clone()))
+                .title(popup_base_title.as_str())
+                .decorations(false)
+                .browser_extensions_enabled(true)
+                .on_navigation({
+                  let app_handle = app_handle.clone();
+                  move |url| {
+                    debug!("[open] popup on_navigation url={}", url);
+                    if should_open_external(url) {
+                      debug!("[open] popup on_navigation external url={}", url);
+                      let _ = app_handle.opener().open_url(url.as_str(), None::<&str>);
+                      return false;
+                    }
+                    true
+                  }
+                });
+
+            #[cfg(target_os = "windows")]
+            {
+              builder = builder.scroll_bar_style(ScrollBarStyle::FluentOverlay);
+            }
+
+            if let Some(size) = features.size() {
+              builder = builder.inner_size(size.width, size.height);
+            }
+
+            #[cfg(windows)]
+            {
+              builder = builder.with_environment(features.opener().environment.clone());
+            }
+
+            let window = match builder.build() {
+              Ok(window) => window,
+              Err(error) => {
+                error!("[new-window] failed: {error:#}");
                 return tauri::webview::NewWindowResponse::Deny;
               }
+            };
 
-              let label = next_popup_label();
-              let popup_label = label.clone();
-              let popup_base_title = url.as_str().to_string();
-              store_base_title(&app_handle, popup_label.as_str(), &popup_base_title);
+            let protected = is_content_protected(&app_handle);
+            let window_for_tasks = window.clone();
+            let app_handle_for_tasks = app_handle.clone();
+            let popup_label_for_tasks = popup_label.clone();
+            let popup_title_for_tasks = popup_base_title.clone();
+            let _ = window.run_on_main_thread(move || {
+              set_content_protected(
+                &window_for_tasks,
+                &popup_label_for_tasks,
+                protected,
+                Some(popup_title_for_tasks.as_str()),
+              );
 
-              let mut builder =
-                WebviewWindowBuilder::new(&app_handle, label, WebviewUrl::External(url.clone()))
-                  .title(popup_base_title.as_str())
-                  .browser_extensions_enabled(true)
-                  .on_navigation({
-                    let app_handle = app_handle.clone();
-                    move |url| {
-                      if should_open_external(url) {
-                        let _ = app_handle.opener().open_url(url.as_str(), None::<&str>);
-                        return false;
-                      }
-                      true
-                    }
-                  });
-
-              if let Some(size) = features.size() {
-                builder = builder.inner_size(size.width, size.height);
-              }
-
-              #[cfg(windows)]
-              {
-                builder = builder.with_environment(features.opener().environment.clone());
-              }
-
-              let window = match builder.build() {
-                Ok(window) => window,
-                Err(error) => {
-                  error!("[new-window] failed: {error:#}");
-                  return tauri::webview::NewWindowResponse::Deny;
-                }
-              };
-
-              let protected = is_content_protected(&app_handle);
-              let window_for_tasks = window.clone();
-              let app_handle_for_tasks = app_handle.clone();
-              let popup_label_for_tasks = popup_label.clone();
-              let popup_title_for_tasks = popup_base_title.clone();
-              let _ = window.run_on_main_thread(move || {
-                set_content_protected(
-                  &window_for_tasks,
-                  &popup_label_for_tasks,
-                  protected,
-                  Some(popup_title_for_tasks.as_str()),
-                );
-
-                #[cfg(target_os = "windows")]
-                if let Err(error) = window_for_tasks.with_webview({
-                  let app_handle = app_handle_for_tasks.clone();
-                  let popup_label = popup_label_for_tasks.clone();
-                  move |webview| {
-                    if let Err(error) = attach_new_window_handler(app_handle.clone(), &webview) {
-                      warn!("[new-window] handler failed: {error:#}");
-                    }
-                    if let Err(error) = attach_permission_handler(&webview) {
-                      warn!("[new-window] permission handler failed: {error:#}");
-                    }
-                    if let Err(error) = attach_close_requested_handler(
-                      app_handle.clone(),
-                      &webview,
-                      popup_label.clone(),
-                    ) {
-                      warn!("[new-window] close handler failed: {error:#}");
-                    }
+              #[cfg(target_os = "windows")]
+              if let Err(error) = window_for_tasks.with_webview({
+                let app_handle = app_handle_for_tasks.clone();
+                let popup_label = popup_label_for_tasks.clone();
+                move |webview| {
+                  if let Err(error) = attach_new_window_handler(&webview) {
+                    warn!("[new-window] handler failed: {error:#}");
                   }
-                }) {
-                  error!("[new-window] with_webview failed: {error:#}");
+                  if let Err(error) = attach_permission_handler(&webview) {
+                    warn!("[new-window] permission handler failed: {error:#}");
+                  }
+                  if let Err(error) = attach_close_requested_handler(
+                    app_handle.clone(),
+                    &webview,
+                    popup_label.clone(),
+                  ) {
+                    warn!("[new-window] close handler failed: {error:#}");
+                  }
                 }
-              });
+              }) {
+                error!("[new-window] with_webview failed: {error:#}");
+              }
+            });
 
-              tauri::webview::NewWindowResponse::Create { window }
-            }
-          })
-          .build()?;
+            tauri::webview::NewWindowResponse::Create { window }
+          }
+        });
+
+      #[cfg(target_os = "windows")]
+      {
+        builder = builder.scroll_bar_style(ScrollBarStyle::FluentOverlay);
+      }
+
+      let _window = builder.build()?;
 
       store_base_title(&app_handle, "main", base_title);
       app.manage(menu_state);
@@ -221,6 +253,7 @@ pub fn run() {
 
       let entry_path = config.line_entry_path.clone();
       let app_handle_for_update = app_handle.clone();
+      #[cfg(target_os = "windows")]
       std::thread::spawn(move || {
         let ExtensionSetup {
           line_dir,
@@ -254,13 +287,11 @@ pub fn run() {
             warn!("[open] main window not found");
             return;
           };
-          let app_handle_for_install = handle_for_task.clone();
           let line_dir_for_install = line_dir.clone();
           let user_dir_for_install = user_dir.clone();
           let entry_path_for_install = entry_path_for_install.clone();
           if let Err(error) = window.with_webview(move |webview| {
             let result = install_extensions_and_open(
-              app_handle_for_install.clone(),
               webview,
               line_dir_for_install.clone(),
               user_dir_for_install.clone(),

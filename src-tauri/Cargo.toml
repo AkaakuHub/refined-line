@@ -11,7 +11,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "better_line_lib"
+name = "refined_line_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -32,8 +32,10 @@ prost = "0.12"
 ureq = "2.12"
 url = "2.5"
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
-webview2-com = "0.38"
-windows = "0.61.2"
 sha2 = "0.10"
 log = "0.4"
 dirs = "6"
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.38"
+windows = "0.61.2"

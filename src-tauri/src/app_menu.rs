@@ -3,7 +3,7 @@ use crate::logger::{apply_log_level, LogLevel};
 use crate::settings::{load_settings, save_settings};
 use crate::tray::set_tray_enabled;
 use log::{info, warn};
-use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuId, PredefinedMenuItem, Submenu};
+use tauri::menu::{CheckMenuItem, MenuEvent, MenuId, PredefinedMenuItem, Submenu};
 use tauri::{is_dev, Manager, Wry};
 use tauri_plugin_autostart::ManagerExt;
 
@@ -17,7 +17,6 @@ const MENU_LOG_DEBUG_ID: &str = "menu.log.debug";
 const MENU_LOG_VERBOSE_ID: &str = "menu.log.verbose";
 
 pub(crate) struct MenuState {
-  pub(crate) menu: Menu<Wry>,
   content_protection: CheckMenuItem<Wry>,
   autostart: CheckMenuItem<Wry>,
   start_minimized: CheckMenuItem<Wry>,
@@ -131,11 +130,7 @@ pub(crate) fn build_menu(
     }
   }
   settings_items.push(&close_item);
-  let settings_menu = Submenu::with_items(app_handle, "設定", true, &settings_items)?;
-
-  let menu = Menu::with_items(app_handle, &[&settings_menu])?;
   Ok(MenuState {
-    menu,
     content_protection,
     autostart,
     start_minimized,
@@ -148,8 +143,18 @@ pub(crate) fn build_menu(
 }
 
 pub(crate) fn handle_menu_event(app_handle: &tauri::AppHandle, event: MenuEvent) {
-  warn!("[menu] event id={:?}", event.id());
-  match event.id() {
+  handle_menu_action_id(app_handle, event.id().as_ref());
+}
+
+#[tauri::command]
+pub(crate) fn menu_action(app_handle: tauri::AppHandle, id: String) -> Result<(), String> {
+  handle_menu_action_id(&app_handle, id.as_str());
+  Ok(())
+}
+
+pub(crate) fn handle_menu_action_id(app_handle: &tauri::AppHandle, id: &str) {
+  warn!("[menu] action id={id}");
+  match id {
     id if id == MENU_CONTENT_PROTECTION_ID => {
       let target = !is_content_protected(app_handle);
       if let Ok(enabled) = set_content_protection_from_app(app_handle, target) {

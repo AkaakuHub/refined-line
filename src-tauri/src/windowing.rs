@@ -27,13 +27,11 @@ fn is_localhost_url(url: &Url) -> bool {
 #[cfg(target_os = "windows")]
 use anyhow::Result;
 #[cfg(target_os = "windows")]
-use log::warn;
+use log::debug;
 #[cfg(target_os = "windows")]
 use tauri::webview::PlatformWebview;
 #[cfg(target_os = "windows")]
 use tauri::Manager;
-#[cfg(target_os = "windows")]
-use tauri_plugin_opener::OpenerExt;
 #[cfg(target_os = "windows")]
 use webview2_com::Microsoft::Web::WebView2::Win32::{
   COREWEBVIEW2_PERMISSION_KIND, COREWEBVIEW2_PERMISSION_KIND_NOTIFICATIONS,
@@ -48,10 +46,7 @@ use webview2_com::{
 use windows::core::PWSTR;
 
 #[cfg(target_os = "windows")]
-pub(crate) fn attach_new_window_handler(
-  app_handle: tauri::AppHandle,
-  webview: &PlatformWebview,
-) -> Result<()> {
+pub(crate) fn attach_new_window_handler(webview: &PlatformWebview) -> Result<()> {
   let controller = webview.controller();
   let core = unsafe { controller.CoreWebView2()? };
   let handler = NewWindowRequestedEventHandler::create(Box::new(move |_, args| {
@@ -63,11 +58,11 @@ pub(crate) fn attach_new_window_handler(
       args.Uri(&mut uri_ptr)?;
     }
     let uri = take_pwstr(uri_ptr);
+    debug!("[open] webview2 new-window requested url={}", uri);
     if let Ok(url) = Url::parse(&uri) {
       if should_open_external(&url) {
-        if let Err(error) = app_handle.opener().open_url(url.as_str(), None::<&str>) {
-          warn!("[open] failed: {error:#}");
-        }
+        debug!("[open] webview2 new-window external url={}", url);
+        // Prevent WebView2 default popup; let Tauri's on_new_window handle external opens.
         unsafe {
           args.SetHandled(true)?;
         }

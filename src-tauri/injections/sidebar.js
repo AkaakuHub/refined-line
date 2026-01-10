@@ -1,4 +1,5 @@
 (() => {
+  console.log("load sidebar.js");
   const splitCols = (value) => {
     const out = [];
     let cur = "";
