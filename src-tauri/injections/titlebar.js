@@ -3,7 +3,7 @@
   // Avoid injecting duplicate titlebar
   if (document.getElementById("refined-line-titlebar-host")) return;
 
-  const TITLEBAR_HEIGHT = 30;
+  const TITLEBAR_HEIGHT = 24;
 
   const host = document.createElement("div");
   host.id = "refined-line-titlebar-host";
@@ -14,7 +14,7 @@
   host.style.right = "0";
   host.style.height = `${TITLEBAR_HEIGHT}px`;
   host.style.zIndex = "2147483647";
-  host.style.pointerEvents = "auto";
+  host.style.pointerEvents = "none";
 
   const shadow = host.attachShadow({ mode: "open" });
 
@@ -24,9 +24,8 @@
       all: initial;
       position: fixed;
       inset: 0 0 auto 0;
-      height: ${TITLEBAR_HEIGHT}px;
       z-index: 2147483647;
-      pointer-events: auto;
+      pointer-events: none;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -35,9 +34,10 @@
       height: ${TITLEBAR_HEIGHT}px;
       display: flex;
       align-items: stretch;
-      background: #1e1e1e;
+      justify-content: flex-start;
+      background: transparent;
       color: #cccccc;
-      border-bottom: 1px solid #2d2d2d;
+      pointer-events: none;
       user-select: none;
       -webkit-font-smoothing: antialiased;
       font-family: "Segoe UI", "Yu Gothic UI", "Noto Sans JP", system-ui, sans-serif;
@@ -45,70 +45,48 @@
       line-height: 1;
     }
 
-    .left {
-      display: flex;
-      align-items: stretch;
-      flex: 0 0 auto;
-      position: relative;
-      -webkit-app-region: no-drag;
-      app-region: no-drag;
-    }
+    .left { display: none; }
 
-    .menu-button {
+    .settings-button {
       appearance: none;
       border: none;
       background: transparent;
-      color: inherit;
-      height: 22px;
-      padding: 0 10px;
+      color: #707991;
+      width: 16px;
+      height: 16px;
+      padding: 0;
       margin: 0;
-      cursor: pointer;
-      white-space: nowrap;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border-radius: 6px;
       margin-left: 6px;
-      margin-top: 3px;
-      margin-bottom: 3px;
-    }
-
-    .menu-button:hover {
-      background: #2a2d2e;
-      color: #e6e6e6;
-    }
-
-    .menu-button.is-open {
-      background: #094771;
-      color: #ffffff;
-    }
-
-    .menu-caret {
-      width: 10px;
-      height: 10px;
+      margin-top: 1px;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      opacity: 0.9;
-      flex: 0 0 auto;
+      border-radius: 999px;
+    }
+
+    .settings-button svg {
+      width: 16px;
+      height: 16px;
+      display: block;
     }
 
     .dropdown {
       position: absolute;
       top: ${TITLEBAR_HEIGHT}px;
-      left: 6px;
+      left: 0;
       min-width: 280px;
       max-width: 420px;
-      background: #252526;
-      color: #cccccc;
-      border: 1px solid #3c3c3c;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
-      border-radius: 10px;
+      background: #ffffff;
+      color: #000000;
+      border: 1px solid #c8c8c8;
+      border-radius: 5px;
       padding: 6px 0;
       display: none;
       z-index: 2147483647;
       white-space: nowrap;
       overflow: hidden;
+      box-shadow: 0 0 10px 0 var(--action-popover-popover-wrap-box-shadow);
     }
 
     .dropdown[data-open="true"] { display: block; }
@@ -130,8 +108,8 @@
       line-height: 1.2;
     }
 
-    .item:hover { background: #2a2d2e; color: #ffffff; }
-    .item:active { background: #303336; }
+    .item:hover { background: #fafafa; }
+    .item:active { background: #fafafa; }
 
     .check {
       width: 16px;
@@ -140,14 +118,13 @@
       align-items: center;
       justify-content: center;
       flex: 0 0 auto;
-      opacity: 0.95;
     }
 
     .check-mark {
       width: 14px;
       height: 14px;
       border-radius: 3px;
-      border: 1px solid rgba(204, 204, 204, 0.35);
+      border: 1px solid #efefef;
       background: transparent;
       position: relative;
     }
@@ -157,13 +134,13 @@
     }
 
     .item.is-checked .check-mark {
-      border-color: rgba(255, 255, 255, 0.22);
+      border-color: #efefef;
       background: #07b53b;
     }
 
     .item.is-checked.is-radio .check-mark {
       background: transparent;
-      border-color: rgba(255, 255, 255, 0.28);
+      border-color: #efefef;
     }
 
     .item.is-checked.is-radio .check-mark::after {
@@ -182,7 +159,6 @@
     }
 
     .shortcut {
-      opacity: 0.65;
       font-size: 11px;
       white-space: nowrap;
       padding-left: 14px;
@@ -190,55 +166,64 @@
 
     .sep {
       height: 1px;
-      margin: 6px 10px;
-      background: rgba(255, 255, 255, 0.10);
-    }
-
-    .drag {
-      flex: 1 1 auto;
-      height: ${TITLEBAR_HEIGHT}px;
-      -webkit-app-region: drag;
-      app-region: drag;
-      cursor: default;
+      margin: 6px 0;
+      background: #efefef;
     }
 
     .right {
       display: flex;
-      align-items: stretch;
+      align-items: center;
       flex: 0 0 auto;
+      position: relative;
       -webkit-app-region: no-drag;
       app-region: no-drag;
+      pointer-events: auto;
+      gap: 6px;
+      margin-left: 7px;
     }
 
-    .winbtn {
+    .control-button {
       appearance: none;
       border: none;
       margin: 0;
       padding: 0;
-      width: 46px;
-      height: ${TITLEBAR_HEIGHT}px;
+      width: 12px;
+      height: 12px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: transparent;
-      color: #cccccc;
+      border-radius: 999px;
       cursor: pointer;
+      position: relative;
+      color: rgba(0, 0, 0, 0.6);
     }
 
-    .winbtn:hover {
-      background: #2a2d2e;
-      color: #ffffff;
+    .control-button .control-icon {
+      width: 7px;
+      height: 7px;
+      opacity: 0;
+      transition: opacity 0.12s ease;
     }
 
-    .winbtn:active { background: #303336; }
-
-    .winbtn.close:hover {
-      background: #e81123;
-      color: #ffffff;
+    .control-button:hover .control-icon,
+    .control-button:focus-visible .control-icon {
+      opacity: 1;
     }
 
-    .icon {
-      display: block;
+    .control-button.minimize {
+      background: #f6c343;
+    }
+
+    .control-button.maximize {
+      background: #58c966;
+    }
+
+    .control-button.close {
+      background: #f26a6a;
+    }
+
+    .control-button:hover {
+      filter: brightness(1.05);
     }
   `;
   shadow.appendChild(style);
@@ -246,32 +231,19 @@
   const bar = document.createElement("div");
   bar.className = "bar";
 
-  const left = document.createElement("div");
-  left.className = "left";
-
   const menuButton = document.createElement("button");
-  menuButton.className = "menu-button";
+  menuButton.className = "settings-button";
   menuButton.type = "button";
-  menuButton.textContent = "設定";
-
-  const caret = document.createElement("span");
-  caret.className = "menu-caret";
-  caret.innerHTML =
-    "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' aria-hidden='true'>" +
-    "<path fill='currentColor' d='M4.2 6.2a1 1 0 0 1 1.4 0L8 8.6l2.4-2.4a1 1 0 1 1 1.4 1.4l-3.1 3.1a1 1 0 0 1-1.4 0L4.2 7.6a1 1 0 0 1 0-1.4z'/>" +
+  menuButton.setAttribute("aria-label", "設定");
+  menuButton.innerHTML =
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' aria-hidden='true' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>" +
+    "<path d='M19.875 6.27a2.225 2.225 0 0 1 1.125 1.948v7.284c0 .809 -.443 1.555 -1.158 1.948l-6.75 4.27a2.269 2.269 0 0 1 -2.184 0l-6.75 -4.27a2.225 2.225 0 0 1 -1.158 -1.948v-7.285c0 -.809 .443 -1.554 1.158 -1.947l6.75 -3.98a2.33 2.33 0 0 1 2.25 0l6.75 3.98h-.033z'/>" +
+    "<path d='M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0'/>" +
     "</svg>";
-  menuButton.appendChild(caret);
 
   const dropdown = document.createElement("div");
   dropdown.className = "dropdown";
   dropdown.setAttribute("data-open", "false");
-
-  left.appendChild(menuButton);
-  left.appendChild(dropdown);
-
-  const drag = document.createElement("div");
-  drag.className = "drag";
-  drag.setAttribute("data-tauri-drag-region", "");
 
   const right = document.createElement("div");
   right.className = "right";
@@ -512,7 +484,7 @@
       return;
     }
     const path = event.composedPath ? event.composedPath() : [];
-    const clickedMenuArea = path.includes(menuButton) || path.includes(dropdown) || path.includes(left);
+    const clickedMenuArea = path.includes(menuButton) || path.includes(dropdown) || path.includes(right);
     if (!clickedMenuArea) {
       setMenuOpen(false);
     }
@@ -540,12 +512,12 @@
   };
 
   const minimizeBtn = document.createElement("button");
-  minimizeBtn.className = "winbtn";
+  minimizeBtn.className = "control-button minimize";
   minimizeBtn.type = "button";
   minimizeBtn.title = "Minimize";
   minimizeBtn.innerHTML =
-    "<svg class='icon' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' aria-hidden='true' style='transform: scale(0.4);'>" +
-    "<path fill='currentColor' d='M19 13H5v-2h14z'/>" +
+    "<svg class='control-icon' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' aria-hidden='true'>" +
+    "<line x1='2' y1='5' x2='8' y2='5' stroke='currentColor' stroke-width='1.2' stroke-linecap='round'/>" +
     "</svg>";
   minimizeBtn.addEventListener("click", () => {
     const currentWindow = getCurrentWindow();
@@ -555,21 +527,16 @@
   });
 
   const maximizeBtn = document.createElement("button");
-  maximizeBtn.className = "winbtn";
+  maximizeBtn.className = "control-button maximize";
   maximizeBtn.type = "button";
   const maximizeIcon =
-    "<svg class='icon' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' aria-hidden='true' style='transform: scale(0.4);'>" +
-    "<rect x='3' y='3' width='6' height='6' rx='0' ry='0' fill='none' stroke='currentColor' stroke-width='0.8' shape-rendering='crispEdges'/>" +
+    "<svg class='control-icon' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' aria-hidden='true'>" +
+    "<line x1='5' y1='2' x2='5' y2='8' stroke='currentColor' stroke-width='1.2' stroke-linecap='round'/>" +
+    "<line x1='2' y1='5' x2='8' y2='5' stroke='currentColor' stroke-width='1.2' stroke-linecap='round'/>" +
     "</svg>";
 
   const restoreIcon =
-    "<svg class='icon' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' aria-hidden='true' style='transform: scale(0.4);'>" +
-    // back line
-    "<line x1='4' y1='2' x2='10' y2='2' stroke='currentColor' stroke-width='1' shape-rendering='crispEdges'/>" +
-    "<line x1='9.5' y1='2' x2='9.5' y2='8' stroke='currentColor' stroke-width='1' shape-rendering='crispEdges'/>" +
-    // front window
-    "<rect x='1.5' y='4' width='6' height='6' fill='none' stroke='currentColor' stroke-width='1' shape-rendering='crispEdges'/>" +
-    "</svg>";
+    maximizeIcon;
 
   const setMaximizeIcon = (isMaximized) => {
     maximizeBtn.innerHTML = isMaximized ? restoreIcon : maximizeIcon;
@@ -591,12 +558,13 @@
   });
 
   const closeBtn = document.createElement("button");
-  closeBtn.className = "winbtn close";
+  closeBtn.className = "control-button close";
   closeBtn.type = "button";
   closeBtn.title = "Close";
   closeBtn.innerHTML =
-    "<svg class='icon' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' aria-hidden='true' style='transform: scale(0.4);'>" +
-    "<path fill='currentColor' d='M13.46 12L19 17.54V19h-1.46L12 13.46L6.46 19H5v-1.46L10.54 12L5 6.46V5h1.46L12 10.54L17.54 5H19v1.46z'/>" +
+    "<svg class='control-icon' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' aria-hidden='true'>" +
+    "<line x1='2.5' y1='2.5' x2='7.5' y2='7.5' stroke='currentColor' stroke-width='1.2' stroke-linecap='round'/>" +
+    "<line x1='7.5' y1='2.5' x2='2.5' y2='7.5' stroke='currentColor' stroke-width='1.2' stroke-linecap='round'/>" +
     "</svg>";
   closeBtn.addEventListener("click", () => {
     const currentWindow = getCurrentWindow();
@@ -604,6 +572,12 @@
       currentWindow.close();
     }
   });
+
+  right.appendChild(closeBtn);
+  right.appendChild(minimizeBtn);
+  right.appendChild(maximizeBtn);
+  right.appendChild(menuButton);
+  right.appendChild(dropdown);
 
   const bindWindowStateSync = () => {
     const currentWindow = getCurrentWindow();
@@ -617,20 +591,42 @@
     }
   };
 
-  right.appendChild(minimizeBtn);
-  right.appendChild(maximizeBtn);
-  right.appendChild(closeBtn);
-
-  bar.appendChild(left);
-  bar.appendChild(drag);
   bar.appendChild(right);
   shadow.appendChild(bar);
+
+  const ensureGlobalStyle = () => {
+    const globalId = "refined-line-titlebar-global-style";
+    if (document.getElementById(globalId)) return;
+    const globalStyle = document.createElement("style");
+    globalStyle.id = globalId;
+    globalStyle.textContent = `
+      body {
+        -webkit-app-region: drag;
+        app-region: drag;
+      }
+      a, button, input, textarea, select, option, [role="button"], [role="link"],
+      [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"],
+      .chatroom-module__chatroom__eVUaK
+      {
+        -webkit-app-region: no-drag;
+        app-region: no-drag;
+      }
+    `;
+    if (document.head) {
+      document.head.appendChild(globalStyle);
+    } else {
+      document.documentElement.appendChild(globalStyle);
+    }
+  };
 
   const injectTitlebar = () => {
     if (document.body && !document.body.contains(host)) {
       document.body.insertBefore(host, document.body.firstChild);
-      document.documentElement.style.paddingTop = `${TITLEBAR_HEIGHT}px`;
     }
+    if (document.body) {
+      document.body.setAttribute("data-tauri-drag-region", "");
+    }
+    ensureGlobalStyle();
   };
 
   if (document.readyState === "loading") {
