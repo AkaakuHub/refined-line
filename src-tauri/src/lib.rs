@@ -13,7 +13,9 @@ mod updater;
 mod windowing;
 
 use app_menu::{build_menu, handle_menu_event, menu_action};
-use commands::{get_is_dev, get_is_maximized, get_settings, update_settings};
+use commands::{
+  confirm_reset_profile, get_is_dev, get_is_maximized, get_settings, reset_profile, update_settings,
+};
 use config::load_config;
 use content_protection::{
   ensure_base_title, get_content_protection, is_content_protected, set_content_protected,
@@ -25,9 +27,9 @@ use extensions::{
   log_cookies_snapshot, persist_session_cookies_snapshot, prepare_extensions, ExtensionSetup,
 };
 use injections::{inject_hotkeys, inject_scripts, inject_titlebar};
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use logger::{apply_log_level, build_plugin, resolve_log_level};
-use paths::app_data_root;
+use paths::{profile_dir, profile_reset_marker};
 use settings::{load_settings, save_settings};
 use tauri::webview::PageLoadEvent;
 #[cfg(target_os = "windows")]
@@ -86,6 +88,8 @@ pub fn run() {
       update_settings,
       get_is_dev,
       get_is_maximized,
+      confirm_reset_profile,
+      reset_profile,
       menu_action
     ])
     .on_window_event(|window, event| {
@@ -117,8 +121,24 @@ pub fn run() {
       apply_log_level(resolve_log_level(&settings.log_level));
       let config = load_config(&app_handle)?;
       let menu_state = build_menu(&app_handle, &settings)?;
-      let app_data = app_data_root(&app_handle)?;
-      let profile_dir = app_data.join("webview2-profile");
+      let profile_dir = profile_dir(&app_handle)?;
+      let reset_marker = profile_reset_marker(&app_handle)?;
+      if reset_marker.is_file() {
+        info!("[webview] reset profile requested");
+        if profile_dir.exists() {
+          match std::fs::remove_dir_all(&profile_dir) {
+            Ok(()) => {
+              info!("[webview] profile dir removed");
+              let _ = std::fs::remove_file(&reset_marker);
+            }
+            Err(error) => {
+              warn!("[webview] profile reset failed: {error:#}");
+            }
+          }
+        } else {
+          let _ = std::fs::remove_file(&reset_marker);
+        }
+      }
       std::fs::create_dir_all(&profile_dir)?;
 
       let base_title = "refined-line";
