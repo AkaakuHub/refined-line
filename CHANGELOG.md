@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.0](https://github.com/AkaakuHub/refined-line/compare/v0.3.0...v0.4.0) (2026-01-19)
+
+
+### Features
+
+* add cache clear feature ([92a688c](https://github.com/AkaakuHub/refined-line/commit/92a688c9438927eb36da984f9d9da138aa60df18))
+* change logger level ([f897a70](https://github.com/AkaakuHub/refined-line/commit/f897a7017d55bd6ff4f0fc68d988bbac9dac37fe))
+* delete too many log ([136c670](https://github.com/AkaakuHub/refined-line/commit/136c670323e55014a5d1962b9ea0b94be34dbee1))
+* maintain session ([38a517b](https://github.com/AkaakuHub/refined-line/commit/38a517b0af3432d3b6670a45fbc23848532d8f25))
+* ドラッグを有効化 ([72ff687](https://github.com/AkaakuHub/refined-line/commit/72ff687d9ffe46c954db800fec2d98c6aa37ea07))
+
+
+### Bug Fixes
+
+* sidebar z-index ([7c87ea4](https://github.com/AkaakuHub/refined-line/commit/7c87ea4fd54bb98c99d465d660018583e3f51a48))
+
 ## [0.3.0](https://github.com/AkaakuHub/refined-line/compare/v0.2.1...v0.3.0) (2026-01-10)
 
 
