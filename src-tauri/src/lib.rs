@@ -6,13 +6,16 @@ mod crx;
 mod extensions;
 mod injections;
 mod logger;
+mod paths;
 mod settings;
 mod tray;
 mod updater;
 mod windowing;
 
 use app_menu::{build_menu, handle_menu_event, menu_action};
-use commands::{get_is_dev, get_is_maximized, get_settings, update_settings};
+use commands::{
+  confirm_reset_profile, get_is_dev, get_is_maximized, get_settings, reset_profile, update_settings,
+};
 use config::load_config;
 use content_protection::{
   ensure_base_title, get_content_protection, is_content_protected, set_content_protected,
@@ -20,10 +23,13 @@ use content_protection::{
 };
 #[cfg(target_os = "windows")]
 use extensions::install_extensions_and_open;
-use extensions::{prepare_extensions, ExtensionSetup};
+use extensions::{
+  log_cookies_snapshot, persist_session_cookies_snapshot, prepare_extensions, ExtensionSetup,
+};
 use injections::{inject_hotkeys, inject_scripts, inject_titlebar};
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use logger::{apply_log_level, build_plugin, resolve_log_level};
+use paths::{profile_dir, profile_reset_marker};
 use settings::{load_settings, save_settings};
 use tauri::webview::PageLoadEvent;
 #[cfg(target_os = "windows")]
@@ -82,6 +88,8 @@ pub fn run() {
       update_settings,
       get_is_dev,
       get_is_maximized,
+      confirm_reset_profile,
+      reset_profile,
       menu_action
     ])
     .on_window_event(|window, event| {
@@ -113,6 +121,25 @@ pub fn run() {
       apply_log_level(resolve_log_level(&settings.log_level));
       let config = load_config(&app_handle)?;
       let menu_state = build_menu(&app_handle, &settings)?;
+      let profile_dir = profile_dir(&app_handle)?;
+      let reset_marker = profile_reset_marker(&app_handle)?;
+      if reset_marker.is_file() {
+        info!("[webview] reset profile requested");
+        if profile_dir.exists() {
+          match std::fs::remove_dir_all(&profile_dir) {
+            Ok(()) => {
+              info!("[webview] profile dir removed");
+              let _ = std::fs::remove_file(&reset_marker);
+            }
+            Err(error) => {
+              warn!("[webview] profile reset failed: {error:#}");
+            }
+          }
+        } else {
+          let _ = std::fs::remove_file(&reset_marker);
+        }
+      }
+      std::fs::create_dir_all(&profile_dir)?;
 
       let base_title = "refined-line";
       let conf = app_handle
@@ -122,6 +149,7 @@ pub fn run() {
         .get(0)
         .ok_or("window config not found")?;
       let mut builder = WebviewWindowBuilder::from_config(&app_handle, conf)?
+        .data_directory(profile_dir.clone())
         .browser_extensions_enabled(true)
         .on_menu_event(|window, event| {
           handle_menu_event(window.app_handle(), event);
@@ -140,6 +168,7 @@ pub fn run() {
         })
         .on_new_window({
           let app_handle = app_handle.clone();
+          let profile_dir = profile_dir.clone();
           move |url, features| {
             debug!("[open] on_new_window url={} features={:?}", url, features);
             if should_open_external(&url) {
@@ -155,6 +184,8 @@ pub fn run() {
 
             let mut builder =
               WebviewWindowBuilder::new(&app_handle, label, WebviewUrl::External(url.clone()))
+                .data_directory(profile_dir.clone())
+                .disable_drag_drop_handler()
                 .title(popup_base_title.as_str())
                 .decorations(false)
                 .browser_extensions_enabled(true)
@@ -304,6 +335,33 @@ pub fn run() {
           }) {
             error!("[open] with_webview failed: {error:#}");
           }
+
+          let handle_for_cookies = handle_for_task.clone();
+          std::thread::spawn(move || {
+            let schedule = [(10u64, "after_10s"), (30u64, "after_30s")];
+            for (delay, tag) in schedule {
+              std::thread::sleep(std::time::Duration::from_secs(delay));
+              let handle = handle_for_cookies.clone();
+              let tag = tag.to_string();
+              let handle_for_main = handle.clone();
+              let _ = handle.run_on_main_thread(move || {
+                if let Some(window) = handle_for_main.get_webview_window("main") {
+                  let tag_for_webview = tag.clone();
+                  if let Err(error) = window.with_webview(move |webview| {
+                    if let Err(error) = persist_session_cookies_snapshot(&webview, &tag_for_webview)
+                    {
+                      warn!("[cookie] {tag_for_webview} persist failed: {error:#}");
+                    }
+                    if let Err(error) = log_cookies_snapshot(&webview, &tag_for_webview) {
+                      warn!("[cookie] {tag_for_webview} failed: {error:#}");
+                    }
+                  }) {
+                    warn!("[cookie] {tag} with_webview failed: {error:#}");
+                  }
+                }
+              });
+            }
+          });
 
           if update_failed_for_dialog {
             let app_handle = handle_for_task.clone();

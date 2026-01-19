@@ -13,8 +13,9 @@ Only support Windows due to WebView2 dependency. Requires Webview2 Runtime 125.0
   - default: off
 - Hide window from capture (Alt + H)
   - default: on
+- Long term session persistence (beta)
 
-## How it work
+## How it works
 
 - This application just loads official Chrome Extension, so this doesn not violate official ToS.
 - This application has no relation with the official LY Corporation.

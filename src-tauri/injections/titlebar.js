@@ -253,6 +253,7 @@
     contentProtection: "menu.content_protection",
     autostart: "menu.autostart",
     startMinimized: "menu.start_minimized",
+    resetProfile: "menu.reset_profile",
     logError: "menu.log.error",
     logWarn: "menu.log.warn",
     logInfo: "menu.log.info",
@@ -299,6 +300,12 @@
     }
   ];
 
+  const resetProfileItem = {
+    id: MENU_IDS.resetProfile,
+    label: "プロファイルデータをリセット",
+    type: "action"
+  };
+
   const logMenuItems = [
     {
       id: MENU_IDS.logError,
@@ -333,10 +340,11 @@
   ];
 
   const buildMenuModel = (isDev) => {
-    const items = [...baseMenuItems, { type: "separator" }];
+    const items = [...baseMenuItems, { type: "separator" }, resetProfileItem];
     if (isDev) {
-      items.push(...logMenuItems, { type: "separator" });
+      items.push({ type: "separator" }, ...logMenuItems);
     }
+    items.push({ type: "separator" });
     items.push({
       id: "window.close",
       label: "閉じる",
@@ -397,6 +405,18 @@
       setMenuOpen(false);
 
       if (item.type === "action") {
+        if (item.id === MENU_IDS.resetProfile) {
+          const invoke = getTauriInvoke();
+          if (!invoke) return;
+          try {
+            const confirmed = await invoke("confirm_reset_profile");
+            if (!confirmed) return;
+            await invoke("reset_profile");
+          } catch (error) {
+            console.warn("[menu] reset profile failed", error);
+          }
+          return;
+        }
         if (item.id === "window.close") {
           const currentWindow = getCurrentWindow();
           if (currentWindow) {

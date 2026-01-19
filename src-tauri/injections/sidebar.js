@@ -118,7 +118,6 @@
       el.style.border = "1px solid #ddd";
       el.style.borderLeft = "none";
       el.style.cursor = "pointer";
-      el.style.zIndex = "9999";
       el.style.display = "flex";
       el.style.alignItems = "center";
       el.style.justifyContent = "center";
