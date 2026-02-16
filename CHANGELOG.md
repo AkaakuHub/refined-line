@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/AkaakuHub/refined-line/compare/v0.4.0...v0.5.0) (2026-02-16)
+
+
+### Features
+
+* バッジを適用する機能 ([9e65109](https://github.com/AkaakuHub/refined-line/commit/9e6510936e3eee942e1e0619826cbe33ca526f80))
+
+
+### Bug Fixes
+
+* badge icon ([b16da56](https://github.com/AkaakuHub/refined-line/commit/b16da56857dd0eda8ce9c315c1fd0e5c8d3da78e))
+* logic ([347d739](https://github.com/AkaakuHub/refined-line/commit/347d7398a8b7cecb1d47439b3fa449b18891cc8d))
+
 ## [0.4.0](https://github.com/AkaakuHub/refined-line/compare/v0.3.0...v0.4.0) (2026-01-19)
 
 
