@@ -6,6 +6,7 @@ mod crx;
 mod extensions;
 mod injections;
 mod logger;
+mod notify_badge;
 mod paths;
 mod settings;
 mod tray;
@@ -29,6 +30,7 @@ use extensions::{
 use injections::{inject_hotkeys, inject_scripts, inject_titlebar};
 use log::{debug, error, info, warn};
 use logger::{apply_log_level, build_plugin, resolve_log_level};
+use notify_badge::{init_notify_badge_state, update_notification_badge};
 use paths::{profile_dir, profile_reset_marker};
 use settings::{load_settings, save_settings};
 use tauri::webview::PageLoadEvent;
@@ -90,6 +92,7 @@ pub fn run() {
       get_is_maximized,
       confirm_reset_profile,
       reset_profile,
+      update_notification_badge,
       menu_action
     ])
     .on_window_event(|window, event| {
@@ -118,6 +121,7 @@ pub fn run() {
         }
       }
       app.manage(WindowState::new(settings.content_protection));
+      init_notify_badge_state(&app_handle);
       apply_log_level(resolve_log_level(&settings.log_level));
       let config = load_config(&app_handle)?;
       let menu_state = build_menu(&app_handle, &settings)?;
