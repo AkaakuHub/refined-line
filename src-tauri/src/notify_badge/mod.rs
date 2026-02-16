@@ -6,6 +6,10 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use tauri::image::Image;
 use tauri::{AppHandle, Manager, Runtime};
+#[cfg(target_os = "windows")]
+use windows::Win32::UI::HiDpi::{GetDpiForWindow, GetSystemMetricsForDpi};
+#[cfg(target_os = "windows")]
+use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON};
 
 #[derive(Default)]
 pub(crate) struct NotifyBadgeState {
@@ -71,14 +75,35 @@ fn apply_notification_badge<R: Runtime>(
 
 #[cfg(target_os = "windows")]
 fn select_overlay_size<R: Runtime>(window: &tauri::WebviewWindow<R>) -> u32 {
-  const OVERLAY_BASE_SIZE: f64 = 20.0;
-  let scale = window.scale_factor().unwrap_or(1.0_f64);
-  let target = (OVERLAY_BASE_SIZE * scale).round().max(16.0_f64) as u32;
+  let target = select_overlay_target_px(window).unwrap_or_else(|| {
+    let scale = window.scale_factor().unwrap_or(1.0_f64);
+    (16.0_f64 * scale).round().max(16.0_f64) as u32
+  });
+
   BADGE_SIZES
     .iter()
     .copied()
-    .min_by_key(|size| target.abs_diff(*size))
-    .unwrap_or(32)
+    .find(|size| *size >= target)
+    .unwrap_or(*BADGE_SIZES.last().unwrap_or(&32))
+}
+
+#[cfg(target_os = "windows")]
+fn select_overlay_target_px<R: Runtime>(window: &tauri::WebviewWindow<R>) -> Option<u32> {
+  let hwnd = window.hwnd().ok()?;
+  let px = unsafe {
+    let dpi = GetDpiForWindow(hwnd);
+    if dpi > 0 {
+      GetSystemMetricsForDpi(SM_CXSMICON, dpi)
+    } else {
+      GetSystemMetrics(SM_CXSMICON)
+    }
+  };
+
+  if px > 0 {
+    Some(px as u32)
+  } else {
+    None
+  }
 }
 
 #[cfg(target_os = "windows")]
